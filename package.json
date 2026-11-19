@@ -1,8 +1,27 @@
 {
   "name": "vibing-tv",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Watch Claude Code write code, live, with its reasoning alongside.",
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "claude",
+    "anthropic",
+    "ai-coding",
+    "coding-agent",
+    "vibe-coding",
+    "live-coding",
+    "code-viewer",
+    "monaco-editor"
+  ],
+  "homepage": "https://github.com/CharlesRA/vibing-tv#readme",
+  "bugs": "https://github.com/CharlesRA/vibing-tv/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CharlesRA/vibing-tv.git"
+  },
+  "author": "Charles Raimbault",
   "license": "MIT",
   "type": "module",
   "engines": {

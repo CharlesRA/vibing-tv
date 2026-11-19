@@ -2,16 +2,26 @@
 
 [![CI](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/CharlesRA/vibing-tv)](https://github.com/CharlesRA/vibing-tv/releases)
 
-**Watch Claude Code write code, live, with its reasoning alongside.**
+**A Claude Code plugin to watch Claude write code, live, with its reasoning alongside.**
 
 ![vibing-tv: Claude's edits typed live in a VS Code–style editor, with its explanations and steps on the right](docs/demo/demo.gif)
 
-Every file Claude creates or edits is typed into a VS Code–style editor in your browser, character by character. Next
-to it, a feed shows what Claude said it was doing, and its checklist stays pinned at the top.
+vibing-tv is a live viewer for [Claude Code](https://docs.claude.com/en/docs/claude-code/overview). Every file Claude
+creates or edits is typed into a VS Code–style editor in your browser, character by character. Next to it, a feed shows
+what Claude said it was doing, and its checklist stays pinned at the top.
 
 Follow Claude the way you would watch a teammate code, and spend less time reading diffs afterwards.
+
+## Why
+
+When an AI coding agent works on its own, you usually see a scrolling terminal and, at the end, a large diff. vibing-tv
+shows you what Claude Code is doing while it does it:
+
+- **See each change as it happens**, in context, instead of reviewing everything at the end.
+- **Know why a file changed**: each edit sits under the explanation Claude gave for it.
+- **Catch a wrong turn early**, and interrupt Claude before it builds on it.
+- **Show it to others**: pair programming with an agent, demos, teaching, or streaming a vibe coding session.
 
 ## Install
 

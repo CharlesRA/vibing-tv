@@ -6,6 +6,16 @@
   "license": "MIT",
   "homepage": "https://github.com/CharlesRA/vibing-tv",
   "repository": "https://github.com/CharlesRA/vibing-tv",
-  "keywords": ["viewer", "live", "monaco", "hooks"],
+  "keywords": [
+    "claude-code",
+    "live-viewer",
+    "live-coding",
+    "code-viewer",
+    "diff-viewer",
+    "ai-coding",
+    "vibe-coding",
+    "monaco",
+    "hooks"
+  ],
   "engines": { "claude-code": ">=2.1.292" }
 }
