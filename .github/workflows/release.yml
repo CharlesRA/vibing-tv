@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # RELEASE_TOKEN (a fine-grained PAT or GitHub App token with contents and pull-requests write):
+      # pull requests opened with the default GITHUB_TOKEN would not trigger CI.
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - if: ${{ steps.release.outputs.release_created }}
+        run: |
+          npm ci
+          npm run build
+
+      # The installable plugin lives on the `release` branch, one commit per version (no force-push).
+      - name: Publish dist/ to the release branch
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin release > /dev/null; then
+            git fetch origin release:release
+            git worktree add ../release-tree release
+          else
+            git worktree add --orphan -b release ../release-tree
+          fi
+          cd ../release-tree
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$GITHUB_WORKSPACE/dist/." .
+          git add -A
+          git commit -m "release: $TAG"
+          git push origin release
+
+      - name: Attach the plugin zip to the GitHub release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          (cd dist && zip -qr "../vibing-tv-$TAG.zip" .)
+          gh release upload "$TAG" "vibing-tv-$TAG.zip"
