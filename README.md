@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/CharlesRA/vibing-tv)](https://github.com/CharlesRA/vibing-tv/releases)
 
 **A Claude Code plugin to watch Claude write code, live, with its reasoning alongside.**
 
