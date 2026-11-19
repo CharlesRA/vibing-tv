@@ -1,0 +1,23 @@
+{
+  "session_id": "6fa35259-ebfe-432d-9eaf-ddc248969f08",
+  "transcript_path": "test/fixtures/transcript-sample.jsonl",
+  "cwd": "/work/demo",
+  "prompt_id": "e6bc16e3-ccd9-44dc-86c0-e68e0d381135",
+  "permission_mode": "acceptEdits",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "/work/demo/notes.md",
+    "content": "alpha\nbeta\ngamma\n"
+  },
+  "tool_response": {
+    "type": "create",
+    "filePath": "/work/demo/notes.md",
+    "content": "alpha\nbeta\ngamma\n",
+    "structuredPatch": [],
+    "originalFile": null,
+    "userModified": false
+  },
+  "tool_use_id": "toolu_01PhSp2y2rMcZDKiobBLJTuo",
+  "duration_ms": 7
+}

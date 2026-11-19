@@ -22,6 +22,8 @@ export default tseslint.config(
     },
   },
   { files: ["**/*.js"], ...tseslint.configs.disableTypeChecked },
+  // Typed fixture readers in tests read better than casts at every call site.
+  { files: ["test/**"], rules: { "@typescript-eslint/no-unnecessary-type-parameters": "off" } },
   { files: ["src/core/**"], rules: forbid("node:*", "../node/*", "../hooks/*", "../server/*", "../viewer/*") },
   { files: ["src/node/**"], rules: forbid("../hooks/*", "../server/*", "../viewer/*") },
   { files: ["src/server/**"], rules: forbid("../hooks/*", "../viewer/*") },
