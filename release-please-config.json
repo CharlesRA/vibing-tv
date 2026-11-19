@@ -4,6 +4,7 @@
     ".": {
       "release-type": "node",
       "package-name": "vibing-tv",
+      "initial-version": "0.1.0",
       "changelog-path": "CHANGELOG.md"
     }
   }
