@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>vibing-tv</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23007acc'/%3E%3Cpath d='M4 5l3 3-3 3M8 11h4' stroke='white' stroke-width='1.6' fill='none'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <header class="top">
+      <span class="brand">vibing-tv</span>
+      <select id="session" title="Claude Code session"></select>
+      <span id="status" class="status" title="Connection to the server">●</span>
+    </header>
+    <main class="layout">
+      <nav class="explorer">
+        <h5>Session files</h5>
+        <ul id="files"></ul>
+      </nav>
+      <section class="editor-area">
+        <div id="tabs" class="tabs"></div>
+        <div id="banner" class="banner" hidden></div>
+        <div id="editor" class="editor"></div>
+        <div id="empty" class="empty">Waiting for Claude's first edit…</div>
+      </section>
+      <aside class="side">
+        <section id="steps" class="steps" hidden>
+          <h5>Steps <span id="steps-count"></span></h5>
+          <ol id="steps-list"></ol>
+        </section>
+        <h5>Feed</h5>
+        <div id="feed" class="feed"></div>
+      </aside>
+    </main>
+    <footer class="bar">
+      <button id="pause" type="button">⏸ Pause</button>
+      <button id="skip" type="button">⏭ Skip</button>
+      <label>speed <input id="speed" type="range" min="1" max="12" value="3" /></label>
+      <span id="counter" class="counter"></span>
+    </footer>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
