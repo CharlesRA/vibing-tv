@@ -28,14 +28,25 @@ const runtime: BuildOptions = {
   logLevel: "warning",
 };
 
+// The README links to files that only exist in the repository (docs/, CONTRIBUTING.md…). In the copy installed
+// with the plugin, point them at GitHub: images to their raw file, other links to their page.
+function absoluteLinks(markdown: string, repository: string): string {
+  const raw = repository.replace("https://github.com/", "https://raw.githubusercontent.com/");
+  return markdown.replace(/(!?\[[^\]]*\])\((?!https?:|#|mailto:)([^)\s]+)\)/g, (_, label: string, path: string) =>
+    label.startsWith("!") ? `${label}(${raw}/main/${path})` : `${label}(${repository}/blob/main/${path})`,
+  );
+}
+
 function copyPluginFiles() {
   cpSync(join(root, "plugin"), dist, { recursive: true });
   const manifest = join(dist, ".claude-plugin", "plugin.json");
-  const plugin = JSON.parse(readFileSync(manifest, "utf8")) as Record<string, unknown>;
+  const plugin = JSON.parse(readFileSync(manifest, "utf8")) as { repository: string };
   writeFileSync(manifest, JSON.stringify({ ...plugin, version }, null, 2) + "\n");
-  for (const file of ["README.md", "LICENSE"]) {
-    if (existsSync(join(root, file))) copyFileSync(join(root, file), join(dist, file));
-  }
+  writeFileSync(
+    join(dist, "README.md"),
+    absoluteLinks(readFileSync(join(root, "README.md"), "utf8"), plugin.repository),
+  );
+  copyFileSync(join(root, "LICENSE"), join(dist, "LICENSE"));
 }
 
 function assertInstallable() {

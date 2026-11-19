@@ -6,7 +6,7 @@
 
 **Watch Claude Code write code, live, with its reasoning alongside.**
 
-![vibing-tv: Claude's edits typed live in a VS Code–style editor, with its explanations and steps on the right](https://raw.githubusercontent.com/CharlesRA/vibing-tv/main/docs/demo/demo.gif)
+![vibing-tv: Claude's edits typed live in a VS Code–style editor, with its explanations and steps on the right](docs/demo/demo.gif)
 
 Every file Claude creates or edits is typed into a VS Code–style editor in your browser, character by character. Next
 to it, a feed shows what Claude said it was doing, and its checklist stays pinned at the top.
