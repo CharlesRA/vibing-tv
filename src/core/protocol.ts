@@ -1,10 +1,20 @@
 // The contract shared by the hooks, the server and the viewer. Bump SCHEMA_VERSION on any incompatible change.
+import type { Values } from "./values.ts";
 
 export const APP_ID = "vibing-tv";
 export const SCHEMA_VERSION = 1;
 export const SSE_EVENT = { event: "ev", patch: "patch" } as const;
 
-export type TodoStatus = "completed" | "in_progress" | "pending";
+export const EventKinds = { Write: "write", Edit: "edit", Todos: "todos" } as const;
+export type EventKind = Values<typeof EventKinds>;
+
+export const TodoStatuses = { Completed: "completed", InProgress: "in_progress", Pending: "pending" } as const;
+export type TodoStatus = Values<typeof TodoStatuses>;
+
+// Names Claude Code uses in hook payloads.
+export const ToolNames = { Write: "Write", Edit: "Edit" } as const;
+export const HookEvents = { SessionStart: "SessionStart", Stop: "Stop" } as const;
+export const SessionSources = { Startup: "startup", Resume: "resume", Clear: "clear", Compact: "compact" } as const;
 export interface Todo {
   content: string;
   status: TodoStatus;
@@ -28,7 +38,7 @@ export interface StreamEvent {
   session_id: string;
   cwd: string | null;
   agent: string | null;
-  kind: "write" | "edit" | "todos";
+  kind: EventKind;
   // Claude Code writes its transcript in batches, sometimes seconds after the hook:
   // the server fills in explanation and steps later from this path (see server/enrich.ts).
   transcript: string | null;

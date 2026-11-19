@@ -34,5 +34,5 @@ test("garbage on stdin exits 0 and writes nothing", () => {
   const r = run("not json", dir);
   expect(r.status).toBe(0);
   expect(r.stdout + r.stderr).toBe("");
-  expect(existsSync(join(dir, "sessions")) && readdirSync(join(dir, "sessions")).length).toBe(false);
+  expect(existsSync(join(dir, "sessions")) ? readdirSync(join(dir, "sessions")).length : 0).toBe(0);
 });

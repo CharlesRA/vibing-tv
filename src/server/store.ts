@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { Patch, SessionSummary, StreamEvent } from "../core/protocol.ts";
+import { dayjs } from "../core/time.ts";
 import { safeId } from "../node/paths.ts";
 
 export interface Store {
@@ -118,9 +119,10 @@ export function createStore(dataDir: string): Store {
 
     prune(maxAgeMs) {
       let removed = 0;
+      const limit = dayjs().subtract(maxAgeMs, "ms");
       for (const f of files()) {
         const p = join(dir, f);
-        if (Date.now() - statSync(p).mtimeMs > maxAgeMs) {
+        if (dayjs(statSync(p).mtime).isBefore(limit)) {
           rmSync(p);
           rmSync(patchFile(f.slice(0, -6)), { force: true });
           offsets.delete(f);

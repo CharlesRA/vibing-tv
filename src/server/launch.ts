@@ -5,20 +5,33 @@ import http from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { APP_ID, type Health } from "../core/protocol.ts";
+import { dayjs } from "../core/time.ts";
+import type { Values } from "../core/values.ts";
 import { compareVersions } from "../core/version.ts";
 import { readConfig } from "../node/config.ts";
 import { VERSION } from "../node/version.ts";
 import { SHUTDOWN_HEADER } from "./http.ts";
 
-// "failed": the server was spawned but never answered (e.g. its data folder is not writable).
-export type LaunchState = "started" | "running" | "replaced" | "port-busy" | "failed";
+export const LaunchStates = {
+  Started: "started",
+  Running: "running",
+  Replaced: "replaced",
+  PortBusy: "port-busy",
+  // the server was spawned but never answered (e.g. its data folder is not writable)
+  Failed: "failed",
+} as const;
+export type LaunchState = Values<typeof LaunchStates>;
 
-type Probe = { kind: "free" } | { kind: "busy" } | { kind: "ours"; health: Health };
+const ProbeKinds = { Free: "free", Busy: "busy", Ours: "ours" } as const;
+type Probe =
+  | { kind: typeof ProbeKinds.Free }
+  | { kind: typeof ProbeKinds.Busy }
+  | { kind: typeof ProbeKinds.Ours; health: Health };
 
 // Run from the sources in development, from the bundle once built.
 const SERVER = fileURLToPath(new URL(import.meta.url.endsWith(".ts") ? "./main.ts" : "./server.mjs", import.meta.url));
-const SHUTDOWN_WAIT_MS = 3000;
-const STARTUP_WAIT_MS = 2000;
+const SHUTDOWN_WAIT = dayjs.duration(3, "seconds");
+const STARTUP_WAIT = dayjs.duration(2, "seconds");
 
 function request(port: number, method: "GET" | "POST", path: string, headers: Record<string, string> = {}) {
   return new Promise<{ status: number; body: string } | "refused" | "error">((resolve) => {
@@ -40,19 +53,19 @@ function request(port: number, method: "GET" | "POST", path: string, headers: Re
 
 async function probe(port: number): Promise<Probe> {
   const r = await request(port, "GET", "/health");
-  if (r === "refused") return { kind: "free" };
-  if (r === "error") return { kind: "busy" };
+  if (r === "refused") return { kind: ProbeKinds.Free };
+  if (r === "error") return { kind: ProbeKinds.Busy };
   try {
     const health = JSON.parse(r.body) as Partial<Health>;
-    return health.app === APP_ID ? { kind: "ours", health: health as Health } : { kind: "busy" };
+    return health.app === APP_ID ? { kind: ProbeKinds.Ours, health: health as Health } : { kind: ProbeKinds.Busy };
   } catch {
-    return { kind: "busy" };
+    return { kind: ProbeKinds.Busy };
   }
 }
 
-async function waitFor(port: number, kind: Probe["kind"], ms: number): Promise<boolean> {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
+async function waitFor(port: number, kind: Probe["kind"], within: ReturnType<typeof dayjs.duration>): Promise<boolean> {
+  const end = dayjs().add(within);
+  while (dayjs().isBefore(end)) {
     if ((await probe(port)).kind === kind) return true;
     await new Promise((r) => setTimeout(r, 100));
   }
@@ -73,7 +86,7 @@ export async function ensureServer({
   const log = (msg: string) => {
     try {
       mkdirSync(dataDir, { recursive: true });
-      appendFileSync(join(dataDir, "server.log"), `${new Date().toISOString()} ${msg}\n`);
+      appendFileSync(join(dataDir, "server.log"), `${dayjs().toISOString()} ${msg}\n`);
     } catch {
       // nowhere to log to
     }
@@ -85,28 +98,28 @@ export async function ensureServer({
       windowsHide: true,
       env: { ...env, VIBING_TV_PORT: String(port), VIBING_TV_DATA_DIR: dataDir },
     }).unref();
-    if (await waitFor(port, "ours", STARTUP_WAIT_MS)) return true;
-    log(`server did not answer on port ${port} after ${STARTUP_WAIT_MS} ms`);
+    if (await waitFor(port, ProbeKinds.Ours, STARTUP_WAIT)) return true;
+    log(`server did not answer on port ${port} after ${STARTUP_WAIT.asSeconds()} s`);
     return false;
   };
 
   const state = await probe(port);
-  if (state.kind === "free") return (await start()) ? "started" : "failed";
-  if (state.kind === "busy") {
+  if (state.kind === ProbeKinds.Free) return (await start()) ? LaunchStates.Started : LaunchStates.Failed;
+  if (state.kind === ProbeKinds.Busy) {
     log(`port ${port} busy with another app`);
-    return "port-busy";
+    return LaunchStates.PortBusy;
   }
   const running = state.health;
   if (compareVersions(running.version, version) < 0) {
     await request(port, "POST", "/shutdown", { [SHUTDOWN_HEADER]: "1" });
-    if (!(await waitFor(port, "free", SHUTDOWN_WAIT_MS))) {
+    if (!(await waitFor(port, ProbeKinds.Free, SHUTDOWN_WAIT))) {
       log(`server ${running.version} on port ${port} did not stop; keeping it`);
-      return "running";
+      return LaunchStates.Running;
     }
-    return (await start()) ? "replaced" : "failed";
+    return (await start()) ? LaunchStates.Replaced : LaunchStates.Failed;
   }
   if (running.dataDir !== dataDir) log(`server on port ${port} uses ${running.dataDir}, not ${dataDir}; keeping it`);
-  return "running";
+  return LaunchStates.Running;
 }
 
 export async function launchFromEnv(

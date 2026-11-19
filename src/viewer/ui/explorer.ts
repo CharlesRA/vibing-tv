@@ -1,4 +1,5 @@
 // The session's files (explorer) and the editor tabs.
+import { FileStatuses } from "../model.ts";
 import { ctx } from "./context.ts";
 import { $, basename, escapeHtml, relativeTo } from "./dom.ts";
 import { editor, modelFor } from "./monaco.ts";
@@ -16,7 +17,7 @@ export function show(file: string): void {
 export function renderFiles(): void {
   $("files").replaceChildren(
     ...ctx.state.order.map((file) => {
-      const status = ctx.state.files.get(file)?.status ?? "M";
+      const status = ctx.state.files.get(file)?.status ?? FileStatuses.Modified;
       const li = document.createElement("li");
       li.className = file === ctx.activeFile ? "active" : "";
       li.title = file;

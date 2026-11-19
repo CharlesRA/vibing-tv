@@ -1,9 +1,14 @@
 // Viewer state, rebuilt from events. Pure: every call returns a new state.
-import type { Patch, StreamEvent, Todo } from "../core/protocol.ts";
+import { EventKinds, type Patch, type StreamEvent, type Todo } from "../core/protocol.ts";
+import type { Values } from "../core/values.ts";
+
+// As in VS Code's explorer: created during the session, or modified.
+export const FileStatuses = { New: "U", Modified: "M" } as const;
+export type FileStatus = Values<typeof FileStatuses>;
 
 export interface FileState {
   content: string | null;
-  status: "U" | "M";
+  status: FileStatus;
   ts: string | null;
 }
 export interface FeedEntry {
@@ -53,10 +58,16 @@ function withFile(state: State, ev: StreamEvent & { file: string }): State {
   const prev = state.files.get(ev.file);
   const newer = !prev || prev.ts == null || ev.ts >= prev.ts;
   const files = new Map(state.files);
-  const createdNow = ev.kind === "write" && ev.before === null;
+  const createdNow = ev.kind === EventKinds.Write && ev.before === null;
   files.set(ev.file, {
     content: newer ? (ev.after ?? prev?.content ?? null) : prev.content,
-    status: prev ? (createdNow && !newer ? "U" : prev.status) : createdNow ? "U" : "M",
+    status: prev
+      ? createdNow && !newer
+        ? FileStatuses.New
+        : prev.status
+      : createdNow
+        ? FileStatuses.New
+        : FileStatuses.Modified,
     ts: newer ? ev.ts : prev.ts,
   });
   const order = prev ? state.order : [...state.order, ev.file];
@@ -67,7 +78,7 @@ const hasFile = (ev: StreamEvent): ev is StreamEvent & { file: string } => !!ev.
 
 export function applyEvent(state: State, ev: StreamEvent): State {
   if (state.events.has(ev.id)) return state;
-  const next = hasFile(ev) && ev.kind !== "todos" ? withFile(state, ev) : { ...state };
+  const next = hasFile(ev) && ev.kind !== EventKinds.Todos ? withFile(state, ev) : { ...state };
   next.events = new Map(state.events).set(ev.id, ev);
   return derive(next);
 }

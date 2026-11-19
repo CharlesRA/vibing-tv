@@ -1,10 +1,11 @@
 // Turns an event into animation operations, and paces the typing. No DOM.
-import type { StreamEvent } from "../core/protocol.ts";
+import { EventKinds, type StreamEvent } from "../core/protocol.ts";
 
+export const OpTypes = { Type: "type", HighlightDelete: "highlightDelete", ReplaceAll: "replaceAll" } as const;
 export type Op =
-  | { type: "type"; at: number; text: string }
-  | { type: "highlightDelete"; start: number; end: number }
-  | { type: "replaceAll"; text: string | null };
+  | { type: typeof OpTypes.Type; at: number; text: string }
+  | { type: typeof OpTypes.HighlightDelete; start: number; end: number }
+  | { type: typeof OpTypes.ReplaceAll; text: string | null };
 
 export type OpsInput = Pick<StreamEvent, "kind"> &
   Partial<Pick<StreamEvent, "before" | "after" | "edit" | "truncated">>;
@@ -28,22 +29,22 @@ function trimCommon(a: string, b: string) {
 }
 
 export function editOps(ev: OpsInput): Op[] {
-  if (ev.truncated) return [{ type: "replaceAll", text: ev.after ?? null }];
-  if (ev.kind === "write") {
+  if (ev.truncated) return [{ type: OpTypes.ReplaceAll, text: ev.after ?? null }];
+  if (ev.kind === EventKinds.Write) {
     const after = ev.after ?? "";
-    if (ev.before == null) return [{ type: "type", at: 0, text: after }];
+    if (ev.before == null) return [{ type: OpTypes.Type, at: 0, text: after }];
     return [
-      { type: "highlightDelete", start: 0, end: ev.before.length },
-      { type: "type", at: 0, text: after },
+      { type: OpTypes.HighlightDelete, start: 0, end: ev.before.length },
+      { type: OpTypes.Type, at: 0, text: after },
     ];
   }
   const { old_string, new_string = "", replace_all = false } = ev.edit ?? {};
   const found = ev.before == null || !old_string ? [] : occurrences(ev.before, old_string, replace_all);
-  if (!old_string || !found.length) return [{ type: "replaceAll", text: ev.after ?? null }];
+  if (!old_string || !found.length) return [{ type: OpTypes.ReplaceAll, text: ev.after ?? null }];
   const { prefix, oldEnd, text } = trimCommon(old_string, new_string);
   return found.reverse().flatMap((start): Op[] => [
-    { type: "highlightDelete", start: start + prefix, end: start + oldEnd },
-    { type: "type", at: start + prefix, text },
+    { type: OpTypes.HighlightDelete, start: start + prefix, end: start + oldEnd },
+    { type: OpTypes.Type, at: start + prefix, text },
   ]);
 }
 

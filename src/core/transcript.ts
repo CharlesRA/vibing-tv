@@ -1,5 +1,5 @@
 // Tolerant reader for Claude Code's JSONL transcript: one line per content block.
-import type { Explanation, Todo } from "./protocol.ts";
+import { TodoStatuses, type Explanation, type Todo } from "./protocol.ts";
 
 interface Block {
   type?: string;
@@ -98,8 +98,8 @@ export function parseChecklist(text: string | null): Todo[] | null {
   if (!last) return null;
   let open = false;
   return last.map(({ content, done }): Todo => {
-    if (done) return { content, status: "completed" };
-    const status = open ? "pending" : "in_progress";
+    if (done) return { content, status: TodoStatuses.Completed };
+    const status = open ? TodoStatuses.Pending : TodoStatuses.InProgress;
     open = true;
     return { content, status };
   });

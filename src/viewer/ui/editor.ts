@@ -1,6 +1,6 @@
 // Plays edits in the editor: highlight what goes away, type what comes in.
 import type { StreamEvent } from "../../core/protocol.ts";
-import { charsPerTick, editOps } from "../player.ts";
+import { charsPerTick, editOps, OpTypes } from "../player.ts";
 import { ctx } from "./context.ts";
 import { renderCounter, speed } from "./controls.ts";
 import { $, sleep } from "./dom.ts";
@@ -32,12 +32,12 @@ async function animate(ev: StreamEvent & { file: string }) {
   let marks: string[] = [];
   for (const op of editOps(ev)) {
     if (skipping()) break;
-    if (op.type === "replaceAll") {
+    if (op.type === OpTypes.ReplaceAll) {
       if (op.text == null) banner("File too large or content unavailable: this edit is not shown.");
       else model.setValue(op.text);
       continue;
     }
-    if (op.type === "highlightDelete") {
+    if (op.type === OpTypes.HighlightDelete) {
       if (op.start === op.end) continue;
       const range = monaco.Range.fromPositions(model.getPositionAt(op.start), model.getPositionAt(op.end));
       editor().revealRangeInCenterIfOutsideViewport(range);

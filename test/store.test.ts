@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, utimesSync } from "
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { dayjs } from "../src/core/time.ts";
 import { createStore } from "../src/server/store.ts";
 
 const ev = (session_id: string, id: string, ts: string) => ({
@@ -84,12 +85,11 @@ test("prune removes sessions older than the limit", () => {
   const { dir, add } = setup();
   add(ev("old", "1", "t"));
   add(ev("recent", "2", "t"));
-  const day = 24 * 3600 * 1000;
-  const old = (Date.now() - 8 * day) / 1000;
-  const recent = (Date.now() - day) / 1000;
+  const old = dayjs().subtract(8, "days").toDate();
+  const recent = dayjs().subtract(1, "day").toDate();
   utimesSync(join(dir, "sessions", "old.jsonl"), old, old);
   utimesSync(join(dir, "sessions", "recent.jsonl"), recent, recent);
-  expect(createStore(dir).prune(7 * day)).toBe(1);
+  expect(createStore(dir).prune(dayjs.duration(7, "days").asMilliseconds())).toBe(1);
   expect(existsSync(join(dir, "sessions", "old.jsonl"))).toBe(false);
   expect(existsSync(join(dir, "sessions", "recent.jsonl"))).toBe(true);
 });

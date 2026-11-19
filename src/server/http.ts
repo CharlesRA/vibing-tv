@@ -4,13 +4,14 @@ import http from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { APP_ID, SCHEMA_VERSION, SSE_EVENT, type Health } from "../core/protocol.ts";
+import { dayjs } from "../core/time.ts";
 import { VERSION } from "../node/version.ts";
 import { createEnricher, type Enricher } from "./enrich.ts";
 import { createStore } from "./store.ts";
 
 const HOST = "127.0.0.1";
 const POLL_MS = 300;
-const PING_MS = 15_000;
+const PING_EVERY = dayjs.duration(15, "seconds");
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -71,7 +72,7 @@ export function startServer({
   const store = createStore(dataDir);
   store.poll(); // existing events are not replayed: clients get them from /history
   const clients = new Set<http.ServerResponse>();
-  let lastActivity = Date.now();
+  let lastActivity = dayjs();
   let boundPort = port;
 
   const json = (res: http.ServerResponse, body: unknown) => {
@@ -152,7 +153,7 @@ export function startServer({
         clients.add(res);
         req.on("close", () => {
           clients.delete(res);
-          lastActivity = Date.now();
+          lastActivity = dayjs();
         });
         return;
     }
@@ -180,14 +181,14 @@ export function startServer({
     setInterval(
       () => {
         const events = store.poll();
-        if (events.length) lastActivity = Date.now();
+        if (events.length) lastActivity = dayjs();
         for (const e of events) broadcast(SSE_EVENT.event, e);
         enricher.track(events);
         for (const p of enricher.tick()) {
           store.addPatch(p);
           broadcast(SSE_EVENT.patch, p);
         }
-        if (clients.size === 0 && Date.now() - lastActivity > idleMs) {
+        if (clients.size === 0 && dayjs().isAfter(lastActivity.add(idleMs, "ms"))) {
           log("idle, shutting down");
           void close();
         }
@@ -196,7 +197,7 @@ export function startServer({
     ),
     setInterval(() => {
       for (const c of clients) c.write(": ping\n\n");
-    }, PING_MS),
+    }, PING_EVERY.asMilliseconds()),
   );
 
   return new Promise((resolveStart, reject) => {

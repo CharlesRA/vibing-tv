@@ -1,4 +1,5 @@
 // Every setting comes from the environment; invalid values fall back to the default instead of failing a hook.
+import { dayjs } from "../core/time.ts";
 import { dataDir } from "./paths.ts";
 
 export interface Config {
@@ -10,7 +11,7 @@ export interface Config {
 }
 
 const DEFAULT_PORT = 4317;
-const DEFAULT_IDLE_MS = 30 * 60 * 1000;
+const DEFAULT_IDLE_MS = dayjs.duration(30, "minutes").asMilliseconds();
 
 function positiveInt(value: string | undefined, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
   const n = Number(value);

@@ -1,6 +1,17 @@
 // Turns a hook payload into a StreamEvent. The disk is never read: Edit payloads carry the file before the edit.
-import { SCHEMA_VERSION, type EditSpec, type HookPayload, type Patch, type StreamEvent } from "./protocol.ts";
+import {
+  EventKinds,
+  HookEvents,
+  SCHEMA_VERSION,
+  ToolNames,
+  type EditSpec,
+  type EventKind,
+  type HookPayload,
+  type Patch,
+  type StreamEvent,
+} from "./protocol.ts";
 import { isSensitive } from "./sensitive.ts";
+import { dayjs } from "./time.ts";
 import { explanationFor, lastTurnText, parseChecklist } from "./transcript.ts";
 
 const MAX_BYTES = 1_000_000;
@@ -23,11 +34,11 @@ function safely<T>(fn: () => T): T | null {
   }
 }
 
-function base(payload: HookPayload & { session_id: string }, kind: StreamEvent["kind"], id: string): StreamEvent {
+function base(payload: HookPayload & { session_id: string }, kind: EventKind, id: string): StreamEvent {
   return {
     v: SCHEMA_VERSION,
     id,
-    ts: new Date(Date.now()).toISOString(),
+    ts: dayjs().toISOString(),
     session_id: payload.session_id,
     cwd: payload.cwd ?? null,
     agent: payload.agent_id ?? payload.agent_type ?? null,
@@ -42,9 +53,9 @@ export function resolvePatch(ev: StreamEvent, transcriptText: string): Patch | n
     const explanation = explanationFor(transcriptText, ev.id);
     if (!explanation) return null;
     const todos = parseChecklist(explanation.text);
-    return { id: ev.id, session_id: ev.session_id, explanation, ...(todos && { todos }) };
+    return { id: ev.id, session_id: ev.session_id, explanation, ...(todos ? { todos } : {}) };
   }
-  if (ev.kind === "todos" && !ev.todos) {
+  if (ev.kind === EventKinds.Todos && !ev.todos) {
     const todos = parseChecklist(lastTurnText(transcriptText));
     return todos ? { id: ev.id, session_id: ev.session_id, todos } : null;
   }
@@ -52,19 +63,19 @@ export function resolvePatch(ev: StreamEvent, transcriptText: string): Patch | n
 }
 
 export const needsPatch = (ev: StreamEvent): boolean =>
-  !!ev.transcript && ((!!ev.file && !ev.explanation) || (ev.kind === "todos" && !ev.todos));
+  !!ev.transcript && ((!!ev.file && !ev.explanation) || (ev.kind === EventKinds.Todos && !ev.todos));
 
 function fileEvent(payload: HookPayload & { session_id: string }, io: EventIO): StreamEvent | null {
   const { tool_name, tool_input = {}, tool_response = {} } = payload;
   const file = tool_input.file_path;
   if (!file || isSensitive(file)) return null;
-  const kind = tool_name === "Write" ? "write" : "edit";
+  const kind = tool_name === ToolNames.Write ? EventKinds.Write : EventKinds.Edit;
   const ev: StreamEvent = { ...base(payload, kind, payload.tool_use_id ?? ""), file };
 
   const original = tool_response.originalFile;
   let before: string | null | undefined;
   let after: string | undefined;
-  if (kind === "edit") {
+  if (kind === EventKinds.Edit) {
     const edit: EditSpec = {
       old_string: tool_input.old_string ?? "",
       new_string: tool_input.new_string ?? "",
@@ -92,7 +103,8 @@ function fileEvent(payload: HookPayload & { session_id: string }, io: EventIO): 
 }
 
 function withPatch(ev: StreamEvent, io: EventIO): StreamEvent {
-  const transcript = (ev.transcript && safely(() => io.readTranscriptTail(ev.transcript ?? ""))) ?? "";
+  const path = ev.transcript;
+  const transcript = path ? (safely(() => io.readTranscriptTail(path)) ?? "") : "";
   const patch = safely(() => resolvePatch(ev, transcript));
   return patch ? { ...ev, ...patch } : ev;
 }
@@ -103,7 +115,9 @@ export function buildEvent(input: unknown, io: EventIO): StreamEvent | null {
   const { session_id } = payload;
   if (!session_id) return null;
   const p = { ...payload, session_id };
-  if (p.hook_event_name === "Stop") return withPatch(base(p, "todos", `stop-${Date.now()}`), io);
-  if (p.tool_name === "Write" || p.tool_name === "Edit") return fileEvent(p, io);
+  if (p.hook_event_name === HookEvents.Stop) {
+    return withPatch(base(p, EventKinds.Todos, `stop-${String(dayjs().valueOf())}`), io);
+  }
+  if (p.tool_name === ToolNames.Write || p.tool_name === ToolNames.Edit) return fileEvent(p, io);
   return null;
 }

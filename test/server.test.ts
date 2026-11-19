@@ -3,13 +3,14 @@ import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { dayjs } from "../src/core/time.ts";
 import type { Health, SessionSummary, StreamEvent } from "../src/core/protocol.ts";
 import { startServer, type ServerOptions } from "../src/server/http.ts";
 
 const ev = (session_id: string, id: string) => ({
   v: 1,
   id,
-  ts: new Date().toISOString(),
+  ts: dayjs().toISOString(),
   session_id,
   cwd: "/w",
   kind: "edit",
@@ -24,7 +25,13 @@ async function setup(opts: Partial<ServerOptions> = {}) {
   const add = (e: { session_id: string }) => {
     appendFileSync(join(dir, "sessions", `${e.session_id}.jsonl`), JSON.stringify(e) + "\n");
   };
-  const srv = await startServer({ port: 0, dataDir: dir, idleMs: 60_000, viewerDir, ...opts });
+  const srv = await startServer({
+    port: 0,
+    dataDir: dir,
+    idleMs: dayjs.duration(1, "minute").asMilliseconds(),
+    viewerDir,
+    ...opts,
+  });
   const url = (p: string) => `http://127.0.0.1:${srv.port}${p}`;
   return { dir, add, srv, url };
 }

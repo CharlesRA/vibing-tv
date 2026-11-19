@@ -5,6 +5,7 @@ import { appendFileSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dayjs } from "../src/core/time.ts";
 import { launchChrome, sleep } from "./cdp.ts";
 
 const out = process.argv[2];
@@ -17,7 +18,7 @@ mkdirSync(join(data, "sessions"));
 
 const sid = "demo1";
 let n = 0;
-const ts = () => new Date(Date.now() + n).toISOString();
+const ts = () => dayjs().add(n, "ms").toISOString();
 const add = (e: Record<string, unknown>) => {
   const ev = {
     v: 1,

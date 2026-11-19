@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
+import { dayjs } from "../src/core/time.ts";
 import type { Health } from "../src/core/protocol.ts";
 import { startServer } from "../src/server/http.ts";
 import { ensureServer } from "../src/server/launch.ts";
@@ -21,13 +22,13 @@ const freePort = () =>
   });
 
 const health = async (port: number) => (await (await fetch(`http://127.0.0.1:${port}/health`)).json()) as Health;
-const waitFor = async <T>(fn: () => Promise<T>, ms = 3000): Promise<T> => {
-  const end = Date.now() + ms;
+const waitFor = async <T>(fn: () => Promise<T>): Promise<T> => {
+  const end = dayjs().add(3, "seconds");
   for (;;) {
     try {
       return await fn();
     } catch (e) {
-      if (Date.now() > end) throw e;
+      if (dayjs().isAfter(end)) throw e;
       await new Promise((r) => setTimeout(r, 100));
     }
   }
@@ -45,7 +46,12 @@ test("starts one server, then sees it running", async () => {
 
   // an older vibing-tv server on the port is replaced by this version
   const port2 = await freePort();
-  const old = await startServer({ port: port2, dataDir, idleMs: 60_000, version: "0.0.1" });
+  const old = await startServer({
+    port: port2,
+    dataDir,
+    idleMs: dayjs.duration(1, "minute").asMilliseconds(),
+    version: "0.0.1",
+  });
   expect(await ensureServer({ port: port2, dataDir, version: "99.0.0" })).toBe("replaced");
   await old.closed;
   const h2 = await waitFor(() => health(port2));

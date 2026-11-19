@@ -1,23 +1,23 @@
 // What Claude said it was doing, one entry per explanation, with the edits it covers.
+import { dayjs, ENRICH_WINDOW } from "../../core/time.ts";
 import type { FeedEntry } from "../model.ts";
 import { ctx } from "./context.ts";
 import { $, basename, escapeHtml } from "./dom.ts";
 
-const ENRICH_WINDOW_MS = 120_000;
-
-// The checklist is already pinned at the top: it is not repeated in the feed.
+// The checklist is already pinned at the top, and the viewer link Claude gives in its first reply is this very
+// page: neither is repeated in the feed.
 const withoutChecklist = (text: string) =>
   text
     .split("\n")
-    .filter((l) => !/^\s*[-*]\s+\[[ xX]\]\s/.test(l))
+    .filter((l) => !/^\s*[-*]\s+\[[ xX]\]\s/.test(l) && !l.includes(`//${location.host}`))
     .join("\n")
     .trim();
 
-// The server keeps looking for explanations for 2 minutes; after that there will be none.
+// The server keeps looking for explanations for ENRICH_WINDOW; after that there will be none.
 const pending = (entry: FeedEntry) => {
   const first = entry.items[0];
-  const ev = first && ctx.state.events.get(first.eventId);
-  return !!ev?.transcript && Date.now() - Date.parse(ev.ts) < ENRICH_WINDOW_MS;
+  const ev = first ? ctx.state.events.get(first.eventId) : undefined;
+  return !!ev?.transcript && dayjs().isBefore(dayjs(ev.ts).add(ENRICH_WINDOW));
 };
 
 export function renderFeed(onReplay: (eventId: string) => void): void {
@@ -29,7 +29,7 @@ export function renderFeed(onReplay: (eventId: string) => void): void {
       const div = document.createElement("div");
       const current = entry.items.some((i) => i.eventId === ctx.playingId);
       div.className = `entry${current ? " current" : ""}`;
-      const time = new Date(entry.ts).toLocaleTimeString();
+      const time = dayjs(entry.ts).format("HH:mm:ss");
       const first = entry.items[0];
       const agent = first ? ctx.state.events.get(first.eventId)?.agent : null;
       const prose = entry.text ? withoutChecklist(entry.text) : "";

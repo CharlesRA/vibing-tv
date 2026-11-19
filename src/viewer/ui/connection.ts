@@ -1,5 +1,6 @@
 // Sessions, history and the live SSE stream.
 import { SSE_EVENT, type Patch, type SessionSummary, type StreamEvent } from "../../core/protocol.ts";
+import { dayjs } from "../../core/time.ts";
 import { applyEvent, applyPatch, hydrate } from "../model.ts";
 import { ctx } from "./context.ts";
 import { renderCounter } from "./controls.ts";
@@ -33,7 +34,7 @@ export async function renderSessions(): Promise<SessionSummary[]> {
     ...sessions.map((s) => {
       const o = document.createElement("option");
       o.value = s.session_id;
-      o.textContent = `${s.cwd ?? "?"} · ${s.last_ts ? new Date(s.last_ts).toLocaleString() : ""}`;
+      o.textContent = `${s.cwd ?? "?"} · ${s.last_ts ? dayjs(s.last_ts).format("YYYY-MM-DD HH:mm") : ""}`;
       o.selected = s.session_id === ctx.sessionId;
       return o;
     }),

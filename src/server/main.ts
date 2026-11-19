@@ -1,16 +1,17 @@
 // Entry point of the detached server process started by the launcher.
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { dayjs } from "../core/time.ts";
 import { readConfig } from "../node/config.ts";
 import { startServer } from "./http.ts";
 import { createStore } from "./store.ts";
 
-const WEEK_MS = 7 * 24 * 3600 * 1000;
+const RETENTION = dayjs.duration(7, "days");
 
 const config = readConfig();
 const log = (msg: string) => {
   try {
-    appendFileSync(join(config.dataDir, "server.log"), `${new Date().toISOString()} ${msg}\n`);
+    appendFileSync(join(config.dataDir, "server.log"), `${dayjs().toISOString()} ${msg}\n`);
   } catch {
     // nowhere to log to
   }
@@ -18,7 +19,7 @@ const log = (msg: string) => {
 
 try {
   mkdirSync(config.dataDir, { recursive: true });
-  createStore(config.dataDir).prune(WEEK_MS);
+  createStore(config.dataDir).prune(RETENTION.asMilliseconds());
   const server = await startServer({ port: config.port, dataDir: config.dataDir, idleMs: config.idleMs, log });
   await server.closed;
 } catch (e) {
