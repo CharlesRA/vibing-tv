@@ -4,7 +4,7 @@ import { dayjs } from "../../core/time.ts";
 import { applyEvent, applyPatch, hydrate } from "../model.ts";
 import { ctx } from "./context.ts";
 import { renderCounter } from "./controls.ts";
-import { $ } from "./dom.ts";
+import { $, basename } from "./dom.ts";
 import { replay } from "./editor.ts";
 import { renderFiles, renderTabs, show } from "./explorer.ts";
 import { renderFeed } from "./feed.ts";
@@ -34,7 +34,10 @@ export async function renderSessions(): Promise<SessionSummary[]> {
     ...sessions.map((s) => {
       const o = document.createElement("option");
       o.value = s.session_id;
-      o.textContent = `${s.cwd ?? "?"} · ${s.last_ts ? dayjs(s.last_ts).format("YYYY-MM-DD HH:mm") : ""}`;
+      // the project folder fits the sidebar; the full path is in the tooltip
+      const when = s.last_ts ? ` (${dayjs(s.last_ts).format("MMM D, HH:mm")})` : "";
+      o.textContent = `${s.cwd ? basename(s.cwd) : "Unknown folder"}${when}`;
+      o.title = s.cwd ?? "";
       o.selected = s.session_id === ctx.sessionId;
       return o;
     }),
@@ -93,10 +96,15 @@ function onEvent(ev: StreamEvent): void {
   renderAll();
 }
 
+function setStatus(live: boolean): void {
+  $("status").classList.toggle("ok", live);
+  $("status").textContent = live ? "Live" : "Offline";
+}
+
 export function connect(): void {
   const source = new EventSource("/events");
   source.onopen = async () => {
-    $("status").classList.add("ok");
+    setStatus(true);
     // silently catch up on what was missed during a disconnection (not animated)
     if (!ctx.sessionId) return;
     const touched = new Set<string>();
@@ -115,7 +123,7 @@ export function connect(): void {
     renderAll();
   };
   source.onerror = () => {
-    $("status").classList.remove("ok");
+    setStatus(false);
   };
   source.addEventListener(SSE_EVENT.event, (m) => {
     onEvent(JSON.parse((m as MessageEvent<string>).data) as StreamEvent);

@@ -49,7 +49,8 @@ hooks are run with `node`; without it, the plugin does nothing.
   it. Only the part that really changes is animated.
 - **Claude's reasoning next to the code.** The feed groups edits under the sentence Claude wrote before them.
 - **Pinned steps.** Claude's markdown checklist (`- [ ]` / `- [x]`) shows as a progress list above the feed.
-- **Replay.** Click a file in the feed to replay that edit. Pause, skip, and change the typing speed from the bottom bar.
+- **Replay.** Click a file in the feed to replay that edit. Pause, skip, and change the typing speed from the controls
+  above the editor, or from the keyboard: <kbd>Space</kbd> pauses, <kbd>→</kbd> skips, <kbd>S</kbd> picks a session.
 - **Every session.** One viewer for all your Claude Code sessions; it follows the latest one until you pick one yourself.
 - **Local and offline.** Everything stays on your machine. The viewer is bundled with the plugin and makes no request to
   any other site.

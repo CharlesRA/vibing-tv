@@ -1,8 +1,9 @@
-// What Claude said it was doing, one entry per explanation, with the edits it covers.
+// What Claude said it was doing, as an activity timeline: one entry per explanation, with the edits it covers.
 import { dayjs, ENRICH_WINDOW } from "../../core/time.ts";
 import type { FeedEntry } from "../model.ts";
 import { ctx } from "./context.ts";
 import { $, basename, escapeHtml } from "./dom.ts";
+import { icons } from "./icons.ts";
 
 // The checklist is already pinned at the top, and the viewer link Claude gives in its first reply is this very
 // page: neither is repeated in the feed.
@@ -36,13 +37,17 @@ export function renderFeed(onReplay: (eventId: string) => void): void {
       const prose = entry.text ? withoutChecklist(entry.text) : "";
       const text = prose
         ? `<div class="text">${escapeHtml(prose).replace(/`([^`\n]+)`/g, "<code>$1</code>")}</div>`
-        : `<div class="text none">${pending(entry) ? "(explanation pending…)" : "(no explanation)"}</div>`;
-      div.innerHTML = `<div class="meta">${time}${agent ? `<span class="badge">${escapeHtml(agent)}</span>` : ""}</div>${text}<div class="items"></div>`;
+        : `<div class="text none">${pending(entry) ? "Waiting for Claude's explanation…" : "No explanation"}</div>`;
+      // subagents sign their own entries
+      const who = agent ? `<span class="who sub">${escapeHtml(agent)}</span>` : `<span class="who">Claude</span>`;
+      div.innerHTML = `<span class="node" aria-hidden="true"></span><div class="meta">${who}<span class="when">${time}</span></div>${text}<div class="items"></div>`;
       div.querySelector(".items")?.replaceChildren(
         ...entry.items.map((item) => {
           const b = document.createElement("button");
           b.className = "item";
-          b.textContent = basename(item.file);
+          b.type = "button";
+          b.innerHTML = icons.file;
+          b.append(basename(item.file));
           b.title = `Replay this edit of ${item.file}`;
           b.onclick = () => {
             onReplay(item.eventId);

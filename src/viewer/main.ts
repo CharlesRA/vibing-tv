@@ -1,8 +1,10 @@
 // Viewer: loads a session's history, then types each new event live in Monaco.
+// Bundled with the viewer (no font CDN); the browser only fetches the subsets a page uses.
+import "@fontsource-variable/inter";
 import "./style.css";
 import { ctx } from "./ui/context.ts";
 import { connect, openSession, renderSessions } from "./ui/connection.ts";
-import { wireControls } from "./ui/controls.ts";
+import { wireControls, wireShortcuts } from "./ui/controls.ts";
 import { $ } from "./ui/dom.ts";
 import { playLoop } from "./ui/editor.ts";
 import { editor } from "./ui/monaco.ts";
@@ -13,6 +15,7 @@ window.addEventListener("unhandledrejection", (e: PromiseRejectionEvent) => {
 });
 
 wireControls();
+wireShortcuts();
 ($("session") as HTMLSelectElement).onchange = (e) => {
   ctx.pinnedByUser = true;
   void openSession((e.target as HTMLSelectElement).value);
