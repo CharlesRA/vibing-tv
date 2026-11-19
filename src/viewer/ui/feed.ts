@@ -11,6 +11,7 @@ const withoutChecklist = (text: string) =>
     .split("\n")
     .filter((l) => !/^\s*[-*]\s+\[[ xX]\]\s/.test(l) && !l.includes(`//${location.host}`))
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
 // The server keeps looking for explanations for ENRICH_WINDOW; after that there will be none.
