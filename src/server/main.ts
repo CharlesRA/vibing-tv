@@ -19,8 +19,9 @@ const log = (msg: string) => {
 
 try {
   mkdirSync(config.dataDir, { recursive: true });
-  createStore(config.dataDir).prune(RETENTION.asMilliseconds());
   const server = await startServer({ port: config.port, dataDir: config.dataDir, idleMs: config.idleMs, log });
+  // only the server that won the port cleans up, and cleaning up can never keep it from starting
+  createStore(config.dataDir).prune(RETENTION.asMilliseconds());
   await server.closed;
 } catch (e) {
   // EADDRINUSE included: another session's server won the race, which is fine.

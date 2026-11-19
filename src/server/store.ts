@@ -122,11 +122,15 @@ export function createStore(dataDir: string): Store {
       const limit = dayjs().subtract(maxAgeMs, "ms");
       for (const f of files()) {
         const p = join(dir, f);
-        if (dayjs(statSync(p).mtime).isBefore(limit)) {
-          rmSync(p);
-          rmSync(patchFile(f.slice(0, -6)), { force: true });
-          offsets.delete(f);
-          removed++;
+        try {
+          if (dayjs(statSync(p).mtime).isBefore(limit)) {
+            rmSync(p, { force: true });
+            rmSync(patchFile(f.slice(0, -6)), { force: true });
+            offsets.delete(f);
+            removed++;
+          }
+        } catch {
+          // gone already (another server pruned it) or locked (Windows): try again next start
         }
       }
       return removed;

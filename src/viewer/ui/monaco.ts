@@ -4,7 +4,7 @@
 import * as monaco from "monaco-editor/editor/editor.api";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
 import "monaco-editor/languages/definitions/register.all";
-import { $ } from "./dom.ts";
+import { $, basename } from "./dom.ts";
 
 declare global {
   interface Window {
@@ -76,7 +76,9 @@ export function modelFor(file: string): monaco.editor.ITextModel {
   let m = models.get(file);
   if (!m) {
     const ext = file.split(".").pop()?.toLowerCase() ?? "";
-    m = monaco.editor.createModel("", LANGUAGES[ext] ?? "plaintext", monaco.Uri.file(file));
+    // A synthetic URI per model: Uri.file() would merge Windows spellings of one path (C:\a vs c:/a) and throw.
+    const uri = monaco.Uri.from({ scheme: "vibing-tv", path: `/${String(models.size)}/${basename(file)}` });
+    m = monaco.editor.createModel("", LANGUAGES[ext] ?? "plaintext", uri);
     models.set(file, m);
   }
   return m;

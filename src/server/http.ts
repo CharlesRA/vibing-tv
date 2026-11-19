@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import http from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APP_ID, SCHEMA_VERSION, SSE_EVENT, type Health } from "../core/protocol.ts";
+import { APP_ID, SCHEMA_VERSION, SHUTDOWN_HEADER, SSE_EVENT, type Health } from "../core/protocol.ts";
 import { dayjs } from "../core/time.ts";
 import { VERSION } from "../node/version.ts";
 import { createEnricher, type Enricher } from "./enrich.ts";
@@ -24,10 +24,6 @@ const TYPES: Record<string, string> = {
 };
 const SEGMENT = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/;
 const DEFAULT_VIEWER = fileURLToPath(new URL("../viewer/", import.meta.url));
-
-// The launcher sends this header to stop an older server. A custom header forces a CORS preflight,
-// so a web page cannot trigger it.
-export const SHUTDOWN_HEADER = "x-vibing-tv-shutdown";
 
 export interface ServerOptions {
   port: number;
@@ -125,6 +121,7 @@ export function startServer({
     }
     switch (url.pathname) {
       case "/health": {
+        lastActivity = dayjs(); // a session probing the server is about to use it
         const health: Health = { app: APP_ID, version, schema: SCHEMA_VERSION, dataDir, pid: process.pid };
         json(res, health);
         return;

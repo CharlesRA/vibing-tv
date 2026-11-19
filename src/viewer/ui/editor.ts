@@ -99,6 +99,15 @@ export async function replay(eventId: string): Promise<void> {
   }
 }
 
+// Fallback after a failed animation; must never throw, or the play loop would stop for good.
+function showFinalContent(file: string, after: string | undefined) {
+  try {
+    if (after !== undefined) modelFor(file).setValue(after);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 export async function playLoop(): Promise<never> {
   for (;;) {
     const ev = ctx.paused || ctx.replaying ? undefined : ctx.queue.shift();
@@ -116,7 +125,7 @@ export async function playLoop(): Promise<never> {
       await animate({ ...ev, file });
     } catch (e) {
       console.error(e);
-      if (ev.after !== undefined) modelFor(file).setValue(ev.after);
+      showFinalContent(file, ev.after);
     }
     ctx.played++;
     renderCounter();

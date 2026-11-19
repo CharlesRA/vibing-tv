@@ -42,6 +42,17 @@ export async function renderSessions(): Promise<SessionSummary[]> {
   return sessions;
 }
 
+// Applies a new event of the current session and queues file events for typing, sorted by ts
+// (hooks can deliver out of order).
+function enqueue(ev: StreamEvent): void {
+  if (ctx.state.events.has(ev.id)) return;
+  ctx.state = applyEvent(ctx.state, ev);
+  if (!ev.file) return;
+  const at = ctx.queue.findIndex((q) => q.ts > ev.ts);
+  if (at === -1) ctx.queue.push(ev);
+  else ctx.queue.splice(at, 0, ev);
+}
+
 // `before`: when a live event switches the view to its session, hydrate only what precedes it,
 // so that this event and the next ones are animated.
 export async function openSession(id: string | null, before: StreamEvent | null = null): Promise<void> {
@@ -51,9 +62,15 @@ export async function openSession(id: string | null, before: StreamEvent | null 
   ctx.activeFile = null;
   $("empty").hidden = false;
   const events = id ? await history(id) : [];
+  // live events of this session that arrived while the history was loading
+  const arrived = ctx.queue;
+  ctx.queue = [];
   ctx.state = hydrate(before ? events.filter((e) => e.ts < before.ts && e.id !== before.id) : events);
   for (const file of ctx.state.order) modelFor(file).setValue(ctx.state.files.get(file)?.content ?? "");
   ctx.played = [...ctx.state.events.values()].filter((e) => e.file).length;
+  // `before` and everything after it are played like live events, in time order
+  const later = before ? [...events.filter((e) => !ctx.state.events.has(e.id)), before] : [];
+  for (const ev of [...later, ...arrived].sort((x, y) => x.ts.localeCompare(y.ts))) enqueue(ev);
   const last = [...ctx.state.events.values()].reverse().find((e) => e.file);
   if (last?.file) show(last.file);
   ctx.playingId = null;
@@ -72,14 +89,7 @@ function onEvent(ev: StreamEvent): void {
     }
     return;
   }
-  if (ctx.state.events.has(ev.id)) return;
-  ctx.state = applyEvent(ctx.state, ev);
-  if (ev.file) {
-    // queue sorted by ts: hooks can deliver out of order
-    const at = ctx.queue.findIndex((q) => q.ts > ev.ts);
-    if (at === -1) ctx.queue.push(ev);
-    else ctx.queue.splice(at, 0, ev);
-  }
+  enqueue(ev);
   renderAll();
 }
 
@@ -87,12 +97,20 @@ export function connect(): void {
   const source = new EventSource("/events");
   source.onopen = async () => {
     $("status").classList.add("ok");
-    // silently catch up on what was missed during a disconnection
+    // silently catch up on what was missed during a disconnection (not animated)
     if (!ctx.sessionId) return;
+    const touched = new Set<string>();
     for (const ev of await history(ctx.sessionId)) {
       if (ctx.state.events.has(ev.id)) continue;
       ctx.state = applyEvent(ctx.state, ev);
-      if (ev.file && ev.after !== undefined) modelFor(ev.file).setValue(ev.after);
+      if (!ev.file) continue;
+      touched.add(ev.file);
+      ctx.played++;
+    }
+    // missed events may have finished out of order: show each file's latest content, as the model knows it
+    for (const file of touched) {
+      if (ctx.queue.some((q) => q.file === file)) continue;
+      modelFor(file).setValue(ctx.state.files.get(file)?.content ?? "");
     }
     renderAll();
   };

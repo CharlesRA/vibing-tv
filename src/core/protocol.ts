@@ -5,6 +5,10 @@ export const APP_ID = "vibing-tv";
 export const SCHEMA_VERSION = 1;
 export const SSE_EVENT = { event: "ev", patch: "patch" } as const;
 
+// The launcher sends this header to stop an older server. A custom header forces a CORS preflight,
+// so a web page cannot trigger it.
+export const SHUTDOWN_HEADER = "x-vibing-tv-shutdown";
+
 export const EventKinds = { Write: "write", Edit: "edit", Todos: "todos" } as const;
 export type EventKind = Values<typeof EventKinds>;
 
@@ -69,7 +73,7 @@ export interface SessionSummary {
 export interface Health {
   app: typeof APP_ID;
   version: string;
-  schema: number;
+  schema: typeof SCHEMA_VERSION;
   dataDir: string;
   pid: number;
 }

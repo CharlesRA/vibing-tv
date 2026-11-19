@@ -1,6 +1,10 @@
 // Tolerant reader for Claude Code's JSONL transcript: one line per content block.
 import { TodoStatuses, type Explanation, type Todo } from "./protocol.ts";
 
+// Line and content-block types of the transcript that matter here; every other kind is ignored.
+const EntryTypes = { Assistant: "assistant", User: "user" } as const;
+const BlockTypes = { Text: "text", ToolUse: "tool_use", ToolResult: "tool_result" } as const;
+
 interface Block {
   type?: string;
   text?: string;
@@ -30,12 +34,15 @@ const blocks = (entry: Entry): Block[] => {
   const content = entry.message?.content;
   return Array.isArray(content) ? (content as Block[]) : [];
 };
-const isToolResult = (entry: Entry) => blocks(entry).length > 0 && blocks(entry).every((b) => b.type === "tool_result");
+const isToolResult = (entry: Entry) =>
+  blocks(entry).length > 0 && blocks(entry).every((b) => b.type === BlockTypes.ToolResult);
 const findToolUse = (entries: Entry[], toolUseId: string) =>
   entries.findIndex(
-    (e) => e.type === "assistant" && blocks(e).some((b) => b.type === "tool_use" && b.id === toolUseId),
+    (e) =>
+      e.type === EntryTypes.Assistant && blocks(e).some((b) => b.type === BlockTypes.ToolUse && b.id === toolUseId),
   );
-const textOf = (entry: Entry): string[] => blocks(entry).flatMap((b) => (b.type === "text" && b.text ? [b.text] : []));
+const textOf = (entry: Entry): string[] =>
+  blocks(entry).flatMap((b) => (b.type === BlockTypes.Text && b.text ? [b.text] : []));
 
 export const hasToolUse = (transcriptText: string, toolUseId: string): boolean =>
   findToolUse(parseLines(transcriptText), toolUseId) !== -1;
@@ -49,15 +56,15 @@ export function explanationFor(transcriptText: string, toolUseId: string): Expla
   for (let i = at - 1; i >= 0; i--) {
     const e = entries[i];
     if (!e) continue;
-    if (e.type === "user" && !isToolResult(e)) return null;
-    if (e.type !== "assistant") continue;
+    if (e.type === EntryTypes.User && !isToolResult(e)) return null;
+    if (e.type !== EntryTypes.Assistant) continue;
     const texts = textOf(e);
     if (!texts.length) continue;
     // consecutive text blocks of one message form the explanation
     const all = [texts.join("\n\n")];
     for (let j = i - 1; j >= 0; j--) {
       const prev = entries[j];
-      if (prev?.type !== "assistant" || prev.message?.id !== e.message?.id) break;
+      if (prev?.type !== EntryTypes.Assistant || prev.message?.id !== e.message?.id) break;
       const more = textOf(prev);
       if (more.length) all.unshift(more.join("\n\n"));
     }
@@ -71,8 +78,8 @@ export function lastTurnText(transcriptText: string): string | null {
   const texts: string[] = [];
   for (let i = entries.length - 1; i >= 0; i--) {
     const e = entries[i];
-    if (e?.type === "user") break;
-    if (e?.type === "assistant") texts.unshift(...textOf(e));
+    if (e?.type === EntryTypes.User) break;
+    if (e?.type === EntryTypes.Assistant) texts.unshift(...textOf(e));
   }
   return texts.length ? texts.join("\n\n") : null;
 }

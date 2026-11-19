@@ -2,15 +2,15 @@
 import { spawn } from "node:child_process";
 import { appendFileSync, mkdirSync } from "node:fs";
 import http from "node:http";
+import net from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APP_ID, type Health } from "../core/protocol.ts";
+import { APP_ID, SHUTDOWN_HEADER, type Health } from "../core/protocol.ts";
 import { dayjs } from "../core/time.ts";
 import type { Values } from "../core/values.ts";
 import { compareVersions } from "../core/version.ts";
 import { readConfig } from "../node/config.ts";
 import { VERSION } from "../node/version.ts";
-import { SHUTDOWN_HEADER } from "./http.ts";
 
 export const LaunchStates = {
   Started: "started",
@@ -30,12 +30,34 @@ type Probe =
 
 // Run from the sources in development, from the bundle once built.
 const SERVER = fileURLToPath(new URL(import.meta.url.endsWith(".ts") ? "./main.ts" : "./server.mjs", import.meta.url));
-const SHUTDOWN_WAIT = dayjs.duration(3, "seconds");
-const STARTUP_WAIT = dayjs.duration(2, "seconds");
+// Worst case (probe + shutdown wait + startup wait) stays under the hook's 5 s timeout.
+const SHUTDOWN_WAIT = dayjs.duration(1.5, "seconds");
+const STARTUP_WAIT = dayjs.duration(1.5, "seconds");
+const RESPONSE_TIMEOUT = dayjs.duration(0.5, "seconds");
+
+const NoAnswer = { Refused: "refused", Error: "error" } as const;
+type NoAnswer = Values<typeof NoAnswer>;
+
+// Free when we can bind it ourselves. Waiting for a refused connection does not work on Windows,
+// where connecting to a closed loopback port takes seconds to fail.
+function canBind(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probeServer = net.createServer();
+    probeServer.once("error", () => {
+      resolve(false);
+    });
+    probeServer.listen(port, "127.0.0.1", () => {
+      probeServer.close(() => {
+        resolve(true);
+      });
+    });
+  });
+}
 
 function request(port: number, method: "GET" | "POST", path: string, headers: Record<string, string> = {}) {
-  return new Promise<{ status: number; body: string } | "refused" | "error">((resolve) => {
-    const req = http.request({ host: "127.0.0.1", port, method, path, headers, timeout: 500 }, (res) => {
+  return new Promise<{ status: number; body: string } | NoAnswer>((resolve) => {
+    const timeout = RESPONSE_TIMEOUT.asMilliseconds();
+    const req = http.request({ host: "127.0.0.1", port, method, path, headers, timeout }, (res) => {
       let body = "";
       res.setEncoding("utf8");
       res.on("data", (c: string) => (body += c));
@@ -45,16 +67,18 @@ function request(port: number, method: "GET" | "POST", path: string, headers: Re
     });
     req.on("timeout", () => req.destroy(new Error("timeout")));
     req.on("error", (e: NodeJS.ErrnoException) => {
-      resolve(e.code === "ECONNREFUSED" ? "refused" : "error");
+      resolve(e.code === "ECONNREFUSED" ? NoAnswer.Refused : NoAnswer.Error);
     });
     req.end();
   });
 }
 
 async function probe(port: number): Promise<Probe> {
+  if (await canBind(port)) return { kind: ProbeKinds.Free };
   const r = await request(port, "GET", "/health");
-  if (r === "refused") return { kind: ProbeKinds.Free };
-  if (r === "error") return { kind: ProbeKinds.Busy };
+  // refused right after a failed bind: the previous owner just closed the port
+  if (r === NoAnswer.Refused) return { kind: ProbeKinds.Free };
+  if (r === NoAnswer.Error) return { kind: ProbeKinds.Busy };
   try {
     const health = JSON.parse(r.body) as Partial<Health>;
     return health.app === APP_ID ? { kind: ProbeKinds.Ours, health: health as Health } : { kind: ProbeKinds.Busy };
@@ -97,7 +121,10 @@ export async function ensureServer({
       stdio: "ignore",
       windowsHide: true,
       env: { ...env, VIBING_TV_PORT: String(port), VIBING_TV_DATA_DIR: dataDir },
-    }).unref();
+    })
+      // a failed spawn must not become an uncaught error in a hook; the wait below reports it
+      .on("error", () => undefined)
+      .unref();
     if (await waitFor(port, ProbeKinds.Ours, STARTUP_WAIT)) return true;
     log(`server did not answer on port ${port} after ${STARTUP_WAIT.asSeconds()} s`);
     return false;
