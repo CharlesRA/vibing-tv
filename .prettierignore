@@ -4,5 +4,6 @@ coverage/
 .superpowers/
 package-lock.json
 CHANGELOG.md
+.release-please-manifest.json
 test/fixtures/
 docs/demo/
