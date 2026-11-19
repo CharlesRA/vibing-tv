@@ -1,12 +1,12 @@
 # vibing-tv
 
-[![CI](https://github.com/<owner>/vibing-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/<owner>/vibing-tv/actions/workflows/ci.yml)
+[![CI](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/CharlesRA/vibing-tv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/<owner>/vibing-tv)](https://github.com/<owner>/vibing-tv/releases)
+[![Release](https://img.shields.io/github/v/release/CharlesRA/vibing-tv)](https://github.com/CharlesRA/vibing-tv/releases)
 
 **Watch Claude Code write code, live, with its reasoning alongside.**
 
-![vibing-tv: Claude's edits typed live in a VS Code–style editor, with its explanations and steps on the right](docs/demo/demo.gif)
+![vibing-tv: Claude's edits typed live in a VS Code–style editor, with its explanations and steps on the right](https://raw.githubusercontent.com/CharlesRA/vibing-tv/main/docs/demo/demo.gif)
 
 Every file Claude creates or edits is typed into a VS Code–style editor in your browser, character by character. Next
 to it, a feed shows what Claude said it was doing, and its checklist stays pinned at the top.
@@ -18,13 +18,13 @@ Follow Claude the way you would watch a teammate code, and spend less time readi
 One command, in your terminal:
 
 ```bash
-claude plugin install vibing-tv --marketplace <owner>/vibing-tv
+claude plugin install vibing-tv --marketplace CharlesRA/vibing-tv
 ```
 
 Or from inside a Claude Code session:
 
 ```
-/plugin install vibing-tv --marketplace <owner>/vibing-tv
+/plugin install vibing-tv --marketplace CharlesRA/vibing-tv
 ```
 
 Then start a new Claude Code session. **Claude's first reply gives you the link** to the viewer
@@ -34,7 +34,7 @@ Then start a new Claude Code session. **Claude's first reply gives you the link*
 <summary>Claude Code older than 2.1.292</summary>
 
 ```bash
-claude plugin marketplace add <owner>/vibing-tv
+claude plugin marketplace add CharlesRA/vibing-tv
 claude plugin install vibing-tv@vibing-tv
 ```
 

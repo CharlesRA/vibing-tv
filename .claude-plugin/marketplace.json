@@ -9,7 +9,7 @@
       "name": "vibing-tv",
       "source": {
         "source": "github",
-        "repo": "<owner>/vibing-tv",
+        "repo": "CharlesRA/vibing-tv",
         "ref": "release"
       },
       "description": "Watch Claude Code write code, live, with its reasoning alongside."

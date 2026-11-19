@@ -27,6 +27,6 @@ does **not** delete this folder: remove it yourself with `rm -rf ~/.vibing-tv`.
 ## Reporting a vulnerability
 
 Please report security issues privately through
-[GitHub Security Advisories](https://github.com/<owner>/vibing-tv/security/advisories/new), not in a public issue. You
+[GitHub Security Advisories](https://github.com/CharlesRA/vibing-tv/security/advisories/new), not in a public issue. You
 should get an answer within a week. Include the version (`curl -s http://127.0.0.1:4317/health`), your OS and the steps
 to reproduce.

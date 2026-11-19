@@ -16,7 +16,7 @@ Write the project in strict TypeScript, split into modules with enforced boundar
 branch from CI; the marketplace entry on `main` points to that branch:
 
 ```json
-{ "source": "github", "repo": "<owner>/vibing-tv", "ref": "release" }
+{ "source": "github", "repo": "CharlesRA/vibing-tv", "ref": "release" }
 ```
 
 ## Consequences
